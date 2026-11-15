@@ -1,0 +1,19 @@
+# Runs PostgreSQL for local development.
+# Start with:  docker compose up -d
+# Host port is the standard 5432. Stop any other local Postgres first (e.g. the Windows service postgresql-x64-18) or the port will clash.
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: atyourservice-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: atyourservice
+      POSTGRES_PASSWORD: atyourservice
+      POSTGRES_DB: atyourservice
+    ports:
+      - '5432:5432'
+    volumes:
+      - pgdata:/var/lib/postgresql/data # keeps data between restarts
+
+volumes:
+  pgdata:

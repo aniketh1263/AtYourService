@@ -1,0 +1,23 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="color-scheme" content="light dark" />
+    <title>AtYourService</title>
+    <!-- Runs BEFORE the page is drawn, so a dark-mode user never sees a white flash while React loads.
+         Uses the saved choice, or the operating system's preference if they never chose. -->
+    <script>
+      try {
+        var saved = localStorage.getItem('atyourservice.theme')
+        var dark = saved ? saved === 'dark' : window.matchMedia('(prefers-color-scheme: dark)').matches
+        document.documentElement.classList.toggle('dark', dark)
+      } catch (e) {}
+    </script>
+  </head>
+  <body>
+    <!-- React renders the whole app inside this one empty div (see src/main.tsx). -->
+    <div id="root"></div>
+    <script type="module" src="/src/main.tsx"></script>
+  </body>
+</html>

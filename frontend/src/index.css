@@ -1,0 +1,110 @@
+/* Tailwind v4 is configured right here in CSS (there is no tailwind.config.js any more). */
+@import "tailwindcss";
+
+/* DARK MODE: Tailwind's default `dark:` variant follows the operating system. We want a switch the user
+   controls, so we redefine the variant: "dark:" applies to anything inside an element with class "dark".
+   The class sits on <html> and is toggled by src/theme/useTheme.ts. */
+@custom-variant dark (&:where(.dark, .dark *));
+
+/* ---------- DESIGN TOKENS ----------
+   Colours that change with the theme live in plain CSS variables. The light values are on :root and the
+   dark ones replace them under .dark. Components never say "white" or "slate-900": they say "surface" or
+   "ink", so a whole screen re-themes by flipping a handful of variables. */
+:root {
+  --canvas: #f4f6fb; /* the page behind everything */
+  --surface: #ffffff; /* cards, bubbles, inputs */
+  --surface-2: #f1f4fa; /* a step away from a card: table heads, chips */
+  --surface-3: #e7ebf4; /* hover state of the above */
+  --line: #e2e7f1; /* hairline borders */
+  --line-strong: #ccd3e2; /* borders of inputs and buttons */
+  --ink: #0f172a; /* main text */
+  --ink-soft: #556079; /* secondary text */
+  --ink-faint: #8a94ab; /* hints, captions */
+  --brand: #1b2a5c; /* the navy of the "AtYourService" name */
+}
+
+.dark {
+  --canvas: #0a0d16;
+  --surface: #121827;
+  --surface-2: #1a2133;
+  --surface-3: #232b42;
+  --line: #242c42;
+  --line-strong: #34405b;
+  --ink: #e9edf7;
+  --ink-soft: #a5afc7;
+  --ink-faint: #6e7993;
+  --brand: #a9bbf0; /* a lighter navy-blue, so the name stays readable on a dark background */
+  color-scheme: dark; /* native scrollbars, form controls and the text caret follow the theme too */
+}
+
+/* @theme turns variables into utility classes: --color-surface => bg-surface, text-surface, border-surface...
+   "inline" tells Tailwind to keep the var(--surface) reference instead of copying its value, which is what
+   lets the colour change when .dark flips the variable. */
+@theme inline {
+  --color-canvas: var(--canvas);
+  --color-surface: var(--surface);
+  --color-surface-2: var(--surface-2);
+  --color-surface-3: var(--surface-3);
+  --color-line: var(--line);
+  --color-line-strong: var(--line-strong);
+  --color-ink: var(--ink);
+  --color-ink-soft: var(--ink-soft);
+  --color-ink-faint: var(--ink-faint);
+  --color-brand: var(--brand);
+}
+
+/* Custom animations: keyframes declared inside @theme become real utilities (animate-fade-up, ...). */
+@theme {
+  --animate-fade-up: fade-up 0.4s cubic-bezier(0.22, 1, 0.36, 1) both;
+  --animate-pop-in: pop-in 0.25s cubic-bezier(0.22, 1, 0.36, 1) both;
+
+  @keyframes fade-up {
+    from {
+      opacity: 0;
+      transform: translateY(10px);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+  @keyframes pop-in {
+    from {
+      opacity: 0;
+      transform: scale(0.92);
+    }
+    to {
+      opacity: 1;
+      transform: none;
+    }
+  }
+}
+
+/* @utility defines our own one-word classes that still work with variants (hover:glass, dark:glass...). */
+@utility glass {
+  /* a frosted-glass panel: translucent surface + blurred backdrop */
+  background-color: color-mix(in oklab, var(--surface) 72%, transparent);
+  backdrop-filter: blur(18px) saturate(1.5);
+}
+
+@utility dot-grid {
+  /* a faint dotted pattern, drawn with a repeating radial gradient (no image file needed) */
+  background-image: radial-gradient(color-mix(in oklab, var(--ink) 9%, transparent) 1px, transparent 1px);
+  background-size: 22px 22px;
+}
+
+@layer base {
+  html {
+    background-color: var(--canvas);
+    color: var(--ink);
+    -webkit-font-smoothing: antialiased;
+  }
+  /* slim scrollbars that match the theme */
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--line-strong) transparent;
+  }
+  ::selection {
+    background-color: color-mix(in oklab, var(--color-indigo-500) 30%, transparent);
+  }
+}
