@@ -16,15 +16,11 @@ import { validateDocumentFile } from '../utils/files'
 type UploadOutcome = { filename: string; ok: boolean; message: string }
 
 export default function UploadPage() {
-  // Agents manage the shared COMPANY policies. Employees manage their own PERSONAL documents (private to them)
-  // and can only read the list of company policies. The server enforces this too; this just shapes the page.
+  // Only admins (agents) can upload or delete company policies. Employees get a read-only list.
+  // The server enforces this too; this just shapes the page.
   const isAgent = useAuth().user?.role === 'agent'
-  const ownScope = isAgent ? 'company' : 'personal'
 
-  // The documents this person manages, loaded when the page opens (and again when we call reload()).
-  const { data: documents, loading, error, reload } = useApi(() => listDocuments(ownScope), [ownScope])
-  // Employees also see which company policies exist (read-only). Agents already see them above.
-  const { data: companyDocs } = useApi(() => (isAgent ? Promise.resolve([]) : listDocuments('company')), [isAgent])
+  const { data: documents, loading, error, reload } = useApi(() => listDocuments('company'), [])
 
   const [uploading, setUploading] = useState(false)
   const [outcomes, setOutcomes] = useState<UploadOutcome[]>([])
@@ -91,20 +87,23 @@ export default function UploadPage() {
   return (
     <>
       <PageHeader
-        title={isAgent ? 'Company policies' : 'Documents'}
+        title="Company policies"
         description={
           isAgent
             ? 'Upload company policy documents (PDF or Word). The assistant answers every employee from them.'
-            : 'Upload your own files (PDF or Word), such as an offer letter or a device manual. The assistant can use them when answering you. Only you can see them.'
+            : 'Company policy documents (read-only). The assistant answers your policy questions from them.'
         }
       />
 
-      <DropZone onFiles={handleFiles} disabled={uploading} />
+      {isAgent && (
+        <>
+          <DropZone onFiles={handleFiles} disabled={uploading} />
 
-      <p className="mt-2 text-xs text-ink-soft">
-        Uploading a file with the same name replaces the old version. Scanned PDFs (pictures of pages) cannot be read.
-        {!isAgent && ' You can keep up to 5 personal documents.'}
-      </p>
+          <p className="mt-2 text-xs text-ink-soft">
+            Uploading a file with the same name replaces the old version. Scanned PDFs (pictures of pages) cannot be read.
+          </p>
+        </>
+      )}
 
       {uploading && (
         <div className="mt-4">
@@ -130,7 +129,7 @@ export default function UploadPage() {
         </ul>
       )}
 
-      <h3 className="mb-3 mt-8 text-lg font-semibold">{isAgent ? 'Company policies' : 'My documents'}</h3>
+      <h3 className="mb-3 mt-8 text-lg font-semibold">Company policies</h3>
 
       {deleteError && <p className="mb-3 text-sm text-red-700 dark:text-red-300">{deleteError}</p>}
 
@@ -144,22 +143,17 @@ export default function UploadPage() {
           hint={
             isAgent
               ? 'Upload a policy file above. Policy questions in the chat cannot be answered until you do.'
-              : 'Upload a file above and ask the assistant about it in the chat.'
+              : 'No company policies have been published yet.'
           }
         />
       )}
 
       {documents && documents.length > 0 && (
-        <DocumentList documents={documents} deletingId={deletingId} onDelete={handleDelete} />
-      )}
-
-      {/* Employees: the shared policies the assistant also searches, shown read-only. */}
-      {!isAgent && companyDocs && companyDocs.length > 0 && (
-        <>
-          <h3 className="mb-1 mt-8 text-lg font-semibold">Company policies</h3>
-          <p className="mb-3 text-xs text-ink-soft">Uploaded by IT support. The assistant searches these too.</p>
-          <DocumentList documents={companyDocs} deletingId={null} />
-        </>
+        <DocumentList
+          documents={documents}
+          deletingId={deletingId}
+          onDelete={isAgent ? handleDelete : undefined}
+        />
       )}
     </>
   )

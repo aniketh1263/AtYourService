@@ -1,6 +1,5 @@
 import { Injectable } from '@nestjs/common';
 import { z } from 'zod';
-import { TicketPriority } from '../../common/enums';
 import { KbArticle } from '../../knowledge-base/kb-article.entity';
 import { KnowledgeBaseService } from '../../knowledge-base/knowledge-base.service';
 import { LlmService } from '../../llm/llm.service';
@@ -64,7 +63,7 @@ export class IncidentHandler implements IntentHandler {
       // ChatService uses this to close the conversation's open ticket (if there is one).
       resolved: result.status === 'resolved',
       // Only meaningful when a ticket exists; ChatService double-checks that too.
-      newPriority: (result.priorityChange as TicketPriority | null) ?? undefined,
+      newPriority: undefined, // employees cannot change priority; only admins can (Tickets page)
     };
   }
 
@@ -79,9 +78,9 @@ export class IncidentHandler implements IntentHandler {
 - Do NOT offer to raise another ticket.
 - If the employee says the problem is still there, reassure them that ticket #${ticket.id} is open and the IT team will follow up. status = unresolved.
 - If the employee confirms the problem is now fixed (for example "it works now" or "connected"), thank them and say the ticket will be marked as resolved. status = resolved.
-- If the employee asks to change the ticket's priority (e.g. "make it high priority", "it's urgent"), set priorityChange to the requested level and confirm in one short sentence that you are updating ticket #${ticket.id}. Do not give troubleshooting steps in that reply. Keep status as it was (solution_given if unsure).`
+- Ticket priority is decided by the IT team only. If the employee asks to change or raise the priority, politely say the IT team sets priorities and will review the ticket. Never mention or reveal any priority level. Leave priorityChange null.`
       : `No ticket exists for this conversation yet.
-- If the employee asks to change a ticket's priority, explain there is no ticket yet and offer to raise one (status = unresolved). Leave priorityChange null.`;
+- Ticket priority is decided by the IT team only. If asked about priority, say so politely and never mention priority levels. Leave priorityChange null.`;
 
     return `You are "AtYourService", a friendly internal IT support assistant helping an employee with a technical problem.
 

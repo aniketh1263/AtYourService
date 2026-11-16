@@ -1,7 +1,7 @@
 import { useState } from 'react'
 import { ApiError } from '../api/client'
-import { listTickets, updateTicketStatus } from '../api/tickets'
-import type { Ticket, TicketStatus } from '../api/types'
+import { listTickets, updateTicketPriority, updateTicketStatus } from '../api/tickets'
+import type { Ticket, TicketPriority, TicketStatus } from '../api/types'
 import EmptyState from '../components/EmptyState'
 import ErrorState from '../components/ErrorState'
 import LoadingState from '../components/LoadingState'
@@ -48,7 +48,7 @@ export default function TicketsPage() {
     .filter(
       (ticket) =>
         !query || // an empty search matches everything
-        `${ticket.id} ${ticket.summary} ${ticket.description} ${ticket.category} ${ticket.priority}`
+        `${ticket.id} ${ticket.summary} ${ticket.description} ${ticket.category} ${ticket.priority ?? ''}`
           .toLowerCase()
           .includes(query),
     )
@@ -56,7 +56,9 @@ export default function TicketsPage() {
     .sort((a, b) => {
       if (sort === 'priority') {
         // More urgent first; for equal urgency, the newer ticket first.
-        return priorityRank[a.priority] - priorityRank[b.priority] || b.id - a.id
+        return (
+          (a.priority ? priorityRank[a.priority] : 9) - (b.priority ? priorityRank[b.priority] : 9) || b.id - a.id
+        )
       }
       // Ticket ids grow over time, so comparing ids is the same as comparing creation order.
       return sort === 'newest' ? b.id - a.id : a.id - b.id
@@ -72,6 +74,22 @@ export default function TicketsPage() {
       const updated = await updateTicketStatus(ticket.id, status)
       // map() builds a new list where the changed ticket is swapped for the updated one.
       // Because "visible" is derived, a ticket that no longer matches the active chip simply drops out of view.
+      setTickets((previous) => previous?.map((t) => (t.id === updated.id ? updated : t)) ?? previous)
+    } catch (err) {
+      setUpdateError(err instanceof ApiError ? err.message : 'Could not update the ticket.')
+    } finally {
+      setUpdatingId(null)
+    }
+  }
+
+  // Admins only: save a new priority.
+  async function handlePriorityChange(ticket: Ticket, priority: TicketPriority) {
+    if (priority === ticket.priority) return
+
+    setUpdatingId(ticket.id)
+    setUpdateError(null)
+    try {
+      const updated = await updateTicketPriority(ticket.id, priority)
       setTickets((previous) => previous?.map((t) => (t.id === updated.id ? updated : t)) ?? previous)
     } catch (err) {
       setUpdateError(err instanceof ApiError ? err.message : 'Could not update the ticket.')
@@ -110,6 +128,7 @@ export default function TicketsPage() {
             counts={counts}
             sort={sort}
             onSortChange={setSort}
+            showPrioritySort={isAgent}
             onRefresh={reload}
             refreshing={loading}
           />
@@ -144,6 +163,7 @@ export default function TicketsPage() {
                 // Clicking the open row closes it; clicking another row opens that one instead.
                 onToggle={(id) => setExpandedId((current) => (current === id ? null : id))}
                 onStatusChange={handleStatusChange}
+                onPriorityChange={handlePriorityChange}
                 canEdit={isAgent}
                 showRequester={isAgent}
               />

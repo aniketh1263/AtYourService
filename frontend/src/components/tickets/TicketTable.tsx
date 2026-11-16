@@ -1,8 +1,8 @@
 import { Fragment } from 'react'
-import type { Ticket, TicketStatus } from '../../api/types'
+import type { Ticket, TicketPriority, TicketStatus } from '../../api/types'
 import { formatDate } from '../../utils/format'
 import { statusStyle } from '../../utils/tickets'
-import PriorityBadge from './PriorityBadge'
+import PrioritySelect from './PrioritySelect'
 import StatusSelect from './StatusSelect'
 
 type TicketTableProps = {
@@ -11,7 +11,8 @@ type TicketTableProps = {
   updatingId: number | null // the ticket whose status is being saved, if any
   onToggle: (id: number) => void
   onStatusChange: (ticket: Ticket, status: TicketStatus) => void
-  canEdit: boolean // agents can change a ticket's status; employees can only watch it
+  onPriorityChange: (ticket: Ticket, priority: TicketPriority) => void
+  canEdit: boolean // admins can change status and priority (and see priority); employees can only watch status
   showRequester: boolean // agents also see who raised each ticket
 }
 
@@ -22,10 +23,11 @@ export default function TicketTable({
   updatingId,
   onToggle,
   onStatusChange,
+  onPriorityChange,
   canEdit,
   showRequester,
 }: TicketTableProps) {
-  const columns = showRequester ? 7 : 6
+  const columns = 5 + (showRequester ? 1 : 0) + (canEdit ? 1 : 0)
 
   return (
     <div className="overflow-x-auto rounded-xl border border-line bg-surface">
@@ -36,7 +38,7 @@ export default function TicketTable({
             <th className="px-4 py-3 font-medium">Summary</th>
             {showRequester && <th className="px-4 py-3 font-medium">Requester</th>}
             <th className="px-4 py-3 font-medium">Category</th>
-            <th className="px-4 py-3 font-medium">Priority</th>
+            {canEdit && <th className="px-4 py-3 font-medium">Priority</th>}
             <th className="px-4 py-3 font-medium">Status</th>
             <th className="px-4 py-3 font-medium">Created</th>
           </tr>
@@ -65,9 +67,15 @@ export default function TicketTable({
                     <td className="whitespace-nowrap px-4 py-3 text-ink-soft">{ticket.user?.name ?? 'Unknown'}</td>
                   )}
                   <td className="whitespace-nowrap px-4 py-3 text-ink-soft">{ticket.category}</td>
-                  <td className="px-4 py-3">
-                    <PriorityBadge priority={ticket.priority} />
-                  </td>
+                  {canEdit && ticket.priority && (
+                    <td className="px-4 py-3">
+                      <PrioritySelect
+                        priority={ticket.priority}
+                        onChange={(priority) => onPriorityChange(ticket, priority)}
+                        disabled={updatingId === ticket.id}
+                      />
+                    </td>
+                  )}
                   <td className="px-4 py-3">
                     {canEdit ? (
                       <StatusSelect

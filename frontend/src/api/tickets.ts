@@ -1,5 +1,13 @@
 import { apiFetch } from './client'
-import type { Ticket, TicketStatus } from './types'
+import type { Ticket, TicketPriority, TicketStatus } from './types'
+
+/** Admins only: changes a ticket's priority. */
+export function updateTicketPriority(id: number, priority: TicketPriority) {
+  return apiFetch<Ticket>(`/tickets/${id}/priority`, {
+    method: 'PATCH',
+    body: JSON.stringify({ priority }),
+  })
+}
 
 /** All tickets, newest first. (Searching and filtering are done in the browser, on this list.) */
 export function listTickets() {

@@ -42,8 +42,12 @@ export class DocumentsService {
     if (!file) {
       throw new BadRequestException('No file received. Send it as multipart/form-data in a field named "file".');
     }
-    const personal = user.role !== UserRole.AGENT;
-    const scope = personal ? DocumentScope.PERSONAL : DocumentScope.COMPANY;
+    // Defence in depth: the controller already restricts this to admins.
+    if (user.role !== UserRole.AGENT) {
+      throw new ForbiddenException('Only admins can upload documents');
+    }
+    const personal = false;
+    const scope = DocumentScope.COMPANY;
     // Which existing documents does this upload replace? Same name, same scope, same owner.
     const sameSlot: FindOptionsWhere<PolicyDocument> = personal
       ? { filename: file.originalname, scope, owner: { id: user.id } }
@@ -131,13 +135,8 @@ export class DocumentsService {
     const doc = await this.docs.findOne({ where: { id }, relations: { owner: true } });
     if (!doc) throw new NotFoundException('Document not found');
 
-    if (doc.scope === DocumentScope.COMPANY) {
-      if (user.role !== UserRole.AGENT) {
-        throw new ForbiddenException('Only support agents can remove company documents');
-      }
-    } else if (doc.owner?.id !== user.id) {
-      // Someone else's personal file: pretend it does not exist.
-      throw new NotFoundException('Document not found');
+    if (user.role !== UserRole.AGENT) {
+      throw new ForbiddenException('Only admins can remove documents');
     }
 
     await this.docs.delete(id); // chunks go too (cascade)

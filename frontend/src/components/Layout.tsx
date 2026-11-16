@@ -23,7 +23,7 @@ export default function Layout() {
     { to: '/', label: 'Chat', icon: ChatIcon, end: true }, // "end" so "/" is not highlighted on every page
     { to: '/history', label: 'History', icon: HistoryIcon },
     { to: '/tickets', label: isAgent ? 'All tickets' : 'My tickets', icon: TicketIcon },
-    { to: '/upload', label: isAgent ? 'Company policies' : 'Documents', icon: DocumentIcon },
+    { to: '/upload', label: 'Company policies', icon: DocumentIcon },
   ]
 
   const initials = (user?.name ?? '?')

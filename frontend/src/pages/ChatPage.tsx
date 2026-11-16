@@ -85,16 +85,19 @@ export default function ChatPage() {
   }, [messages, loading])
 
   // Sends the employee's text to the AI and adds both sides to the chat.
-  async function handleSend(text: string) {
+  async function handleSend(text: string, image?: File) {
     stickToBottom.current = true // sending a message always brings you back to the bottom
     // 1. Show the user's bubble immediately, without waiting for the server.
     // setMessages(previous => ...) is the safe way to add to a list: it always starts from the latest list.
-    setMessages((previous) => [...previous, { id: crypto.randomUUID(), role: 'user', text }])
+    setMessages((previous) => [
+      ...previous,
+      { id: crypto.randomUUID(), role: 'user', text, imageUrl: image ? URL.createObjectURL(image) : undefined },
+    ])
     setLoading(true)
 
     try {
       // 2. Ask the backend. "await" pauses this function (not the whole page) until the reply arrives.
-      const response = await sendMessage(text, conversationId)
+      const response = await sendMessage(text, conversationId, image)
 
       // 3. Remember the conversation so the next message continues it, and show the reply.
       setConversationId(response.conversationId)

@@ -34,6 +34,12 @@ export class UpdateTicketStatusDto {
   status!: TicketStatus;
 }
 
+export class UpdateTicketPriorityDto {
+  @NormalizeEnum(TicketPriority) // "high" -> "High"
+  @IsEnum(TicketPriority)
+  priority!: TicketPriority;
+}
+
 // Query string for GET /api/tickets?search=outlook&status=Open
 export class ListTicketsQueryDto {
   @IsOptional()

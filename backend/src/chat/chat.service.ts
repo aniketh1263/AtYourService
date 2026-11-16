@@ -1,4 +1,5 @@
-import { Injectable } from '@nestjs/common';
+import { BadRequestException, Injectable } from '@nestjs/common';
+import { LlmService } from '../llm/llm.service';
 import { ClassifierService } from '../classifier/classifier.service';
 import { Intent, MessageRole, TicketStatus } from '../common/enums';
 import { ConversationsService } from '../conversations/conversations.service';
@@ -9,6 +10,15 @@ import { IncidentHandler } from './handlers/incident.handler';
 import { InfoHandler } from './handlers/info.handler';
 import { IntentHandler } from './handlers/intent-handler';
 import { RequestHandler } from './handlers/request.handler';
+
+/** Checks the real file bytes (not the filename or the client's claim) and returns the image type, or null. */
+function detectImageType(b: Buffer): 'image/png' | 'image/jpeg' | 'image/webp' | 'image/gif' | null {
+  if (b.length > 12 && b.subarray(0, 8).equals(Buffer.from([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a]))) return 'image/png';
+  if (b.length > 3 && b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff) return 'image/jpeg';
+  if (b.length > 12 && b.toString('ascii', 0, 4) === 'RIFF' && b.toString('ascii', 8, 12) === 'WEBP') return 'image/webp';
+  if (b.length > 6 && b.toString('ascii', 0, 4) === 'GIF8') return 'image/gif';
+  return null;
+}
 
 /**
  * The brain of the chat. For every employee message it runs the same 4 steps:
@@ -23,6 +33,7 @@ export class ChatService {
     private readonly conversations: ConversationsService,
     private readonly classifier: ClassifierService,
     private readonly tickets: TicketsService,
+    private readonly llm: LlmService,
     incident: IncidentHandler,
     request: RequestHandler,
     info: InfoHandler,
@@ -34,10 +45,23 @@ export class ChatService {
     };
   }
 
-  async chat(dto: ChatDto, userId: string) {
+  async chat(dto: ChatDto, userId: string, image?: Express.Multer.File) {
+    const typed = (dto.message ?? '').trim();
+    if (!typed && !image) throw new BadRequestException('Write a message or attach a screenshot.');
+
+    // A screenshot is turned into text once, here. Everything after this point only sees text.
+    // The image itself is NOT stored: only the AI's description is kept in the message.
+    let message = typed;
+    if (image) {
+      const mediaType = detectImageType(image.buffer);
+      if (!mediaType) throw new BadRequestException('Only PNG, JPG, WebP or GIF screenshots are supported.');
+      const description = await this.llm.describeImage(image.buffer, mediaType, typed);
+      message = `${typed || 'I attached a screenshot of my problem.'}\n\n[Screenshot - AI reading: ${description}]`;
+    }
+
     // 1. Find or create the conversation (it must belong to this user), then store what they wrote.
-    const conversation = await this.conversations.startOrContinue(dto.conversationId, dto.message, userId);
-    await this.conversations.addMessage(conversation, MessageRole.USER, dto.message);
+    const conversation = await this.conversations.startOrContinue(dto.conversationId, typed || 'Screenshot', userId);
+    await this.conversations.addMessage(conversation, MessageRole.USER, message);
 
     // 2. Classify using the recent history, so short follow-ups ("yes", "still broken") keep their topic.
     const turns = await this.conversations.recentTurns(conversation.id);
@@ -66,18 +90,7 @@ export class ChatService {
       reply += `\n\nGood to hear it is working again. I've marked ticket #${ticket.id} as Resolved.`;
     }
 
-    // The employee asked to change the ticket's urgency ("make it high"): apply it to the open ticket.
-    if (result.newPriority && activeTicket && result.newPriority !== activeTicket.priority) {
-      const oldPriority = activeTicket.priority;
-      ticket = await this.tickets.updatePriority(activeTicket.id, result.newPriority);
-      // Our own factual message replaces Claude's sentence, so the reply is not said twice.
-      reply =
-        `I've updated the priority of ticket #${ticket.id}.\n\n` +
-        `Summary: ${ticket.summary}\n` +
-        `Priority: ${oldPriority} → ${ticket.priority}\n` +
-        `Status: ${ticket.status}\n` +
-        `Category: ${ticket.category}`;
-    }
+    // Priority is set by IT admins only, so the chat never changes it (and never shows it).
 
     // 4. Store the reply so it shows up in History.
     await this.conversations.addMessage(conversation, MessageRole.ASSISTANT, reply);
@@ -90,7 +103,7 @@ export class ChatService {
       offerTicket: (result.offerTicket ?? false) && !activeTicket,
       catalogItems: result.catalogItems ?? [], // UI shows catalog cards (with portal links)
       sources: result.sources ?? [], // UI shows "Source: HR Policy.pdf" under policy answers
-      ticket: ticket ?? null, // set when a ticket was created OR resolved in this turn
+      ticket: ticket ? this.hidePriority(ticket) : null, // set when a ticket was created OR resolved in this turn
     };
   }
 
@@ -121,12 +134,18 @@ export class ChatService {
       const conversation = await this.conversations.findOneWithMessages(conversationId, userId);
       await this.conversations.addMessage(conversation, MessageRole.ASSISTANT, reply);
     }
-    return { ...result, reply };
+    return { ...result, ticket: this.hidePriority(result.ticket), reply };
+  }
+
+  // Priority is admin-only: never send it to the chat user.
+  private hidePriority(ticket: Ticket): Ticket {
+    const { priority: _priority, ...rest } = ticket;
+    return rest as Ticket;
   }
 
   private ticketMessage({ ticket, created }: { ticket: Ticket; created: boolean }) {
     return created
-      ? `I've raised ticket #${ticket.id}: "${ticket.summary}" (priority: ${ticket.priority}). The IT team will pick it up, and you can follow its status on the Tickets page.`
+      ? `I've raised ticket #${ticket.id}: "${ticket.summary}". The IT team will pick it up, and you can follow its status on the Tickets page.`
       : `Ticket #${ticket.id} already exists for this conversation ("${ticket.summary}", status: ${ticket.status}).`;
   }
 }

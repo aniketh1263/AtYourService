@@ -1,4 +1,4 @@
-import { IsNotEmpty, IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
+import { IsOptional, IsString, IsUUID, MaxLength } from 'class-validator';
 
 export class ChatDto {
   // Omit on the first message; send back the id we returned to continue the same conversation.
@@ -6,8 +6,9 @@ export class ChatDto {
   @IsUUID()
   conversationId?: string;
 
+  // May be empty when a screenshot is attached; ChatService requires text OR an image.
+  @IsOptional()
   @IsString()
-  @IsNotEmpty()
   @MaxLength(2000) // keeps each AI call small and cheap
-  message!: string;
+  message?: string;
 }

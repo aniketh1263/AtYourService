@@ -9,6 +9,7 @@ export interface UiMessage {
   id: string // unique, so React can track each bubble
   role: 'user' | 'assistant'
   text: string
+  imageUrl?: string // user only: a local preview of the screenshot they attached
   isError?: boolean // a red bubble for failures (e.g. backend down)
   intent?: Intent // assistant only: what the AI decided this was about
   catalogItems?: CatalogItem[] // assistant only: cards with portal links

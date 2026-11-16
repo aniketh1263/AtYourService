@@ -14,6 +14,7 @@ import { UserRole } from '../common/enums';
 import {
   CreateTicketDto,
   ListTicketsQueryDto,
+  UpdateTicketPriorityDto,
   UpdateTicketStatusDto,
 } from './dto/ticket.dto';
 import { TicketsService } from './tickets.service';
@@ -24,20 +25,30 @@ export class TicketsController {
 
   // POST /api/tickets            -> create a ticket (owned by the caller)
   @Post()
-  create(@Body() dto: CreateTicketDto, @CurrentUser() user: AuthUser) {
-    return this.tickets.create(dto, user.id);
+  async create(@Body() dto: CreateTicketDto, @CurrentUser() user: AuthUser) {
+    return this.tickets.forViewer(await this.tickets.create(dto, user.id), user);
   }
 
   // GET /api/tickets?search=&status=  -> employees: my tickets. agents: all tickets.
   @Get()
-  findAll(@Query() query: ListTicketsQueryDto, @CurrentUser() user: AuthUser) {
-    return this.tickets.findAll(query, user);
+  async findAll(@Query() query: ListTicketsQueryDto, @CurrentUser() user: AuthUser) {
+    return this.tickets.forViewer(await this.tickets.findAll(query, user), user);
   }
 
   // GET /api/tickets/:id         -> one ticket (employees: only their own)
   @Get(':id')
-  findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: AuthUser) {
-    return this.tickets.findOne(id, user);
+  async findOne(@Param('id', ParseIntPipe) id: number, @CurrentUser() user: AuthUser) {
+    return this.tickets.forViewer(await this.tickets.findOne(id, user), user);
+  }
+
+  // PATCH /api/tickets/:id/priority -> change the priority. AGENTS (admins) ONLY.
+  @Roles(UserRole.AGENT)
+  @Patch(':id/priority')
+  updatePriority(
+    @Param('id', ParseIntPipe) id: number,
+    @Body() dto: UpdateTicketPriorityDto,
+  ) {
+    return this.tickets.updatePriority(id, dto.priority);
   }
 
   // PATCH /api/tickets/:id/status -> move between Open / In Progress / Resolved. AGENTS ONLY.

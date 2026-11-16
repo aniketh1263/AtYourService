@@ -8,6 +8,7 @@ type TicketFiltersProps = {
   counts: Record<StatusFilter, number> // how many tickets each chip would show
   sort: SortOrder
   onSortChange: (value: SortOrder) => void
+  showPrioritySort: boolean // only admins can see priority
   onRefresh: () => void
   refreshing: boolean
 }
@@ -26,6 +27,7 @@ export default function TicketFilters({
   counts,
   sort,
   onSortChange,
+  showPrioritySort,
   onRefresh,
   refreshing,
 }: TicketFiltersProps) {
@@ -47,7 +49,7 @@ export default function TicketFilters({
         >
           <option value="newest">Newest first</option>
           <option value="oldest">Oldest first</option>
-          <option value="priority">Highest priority first</option>
+          {showPrioritySort && <option value="priority">Highest priority first</option>}
         </select>
         <button
           type="button"

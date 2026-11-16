@@ -83,3 +83,11 @@ export const LogoutIcon = (p: SVGProps<SVGSVGElement>) => (
     <path d="M10 4H5a1 1 0 0 0-1 1v14a1 1 0 0 0 1 1h5M16 8l4 4-4 4M20 12H9" />
   </Icon>
 )
+
+export const ImageIcon = (p: SVGProps<SVGSVGElement>) => (
+  <Icon {...p}>
+    <rect x="3" y="4" width="18" height="16" rx="2" />
+    <circle cx="9" cy="10" r="1.5" />
+    <path d="M21 16l-5-5-8 8" />
+  </Icon>
+)

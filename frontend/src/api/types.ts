@@ -29,7 +29,7 @@ export interface Ticket {
   summary: string
   description: string
   category: IssueCategory
-  priority: TicketPriority
+  priority?: TicketPriority // admins only: the server leaves it out for employees
   status: TicketStatus
   createdAt: string // dates travel as text in JSON, e.g. "2026-11-14T09:30:00.000Z"
   updatedAt: string

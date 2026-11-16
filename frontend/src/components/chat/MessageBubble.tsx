@@ -39,10 +39,15 @@ export default function MessageBubble({
     return (
       // motion-safe:animate-fade-up = the bubble slides up and fades in (our animation from index.css),
       // but only for people who have not asked their device to reduce motion.
-      <div className="flex justify-end motion-safe:animate-fade-up">
-        <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-blue-900 dark:bg-blue-900 px-4 py-2.5 text-sm text-white shadow-sm">
-          {message.text}
-        </p>
+      <div className="flex flex-col items-end gap-1 motion-safe:animate-fade-up">
+        {message.imageUrl && (
+          <img src={message.imageUrl} alt="Attached screenshot" className="max-h-48 max-w-[85%] rounded-xl border border-line shadow-sm" />
+        )}
+        {message.text && (
+          <p className="max-w-[85%] whitespace-pre-wrap break-words rounded-2xl rounded-br-sm bg-blue-900 dark:bg-blue-900 px-4 py-2.5 text-sm text-white shadow-sm">
+            {message.text}
+          </p>
+        )}
       </div>
     )
   }

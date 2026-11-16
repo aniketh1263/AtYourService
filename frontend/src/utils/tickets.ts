@@ -1,5 +1,7 @@
 import type { TicketPriority, TicketStatus } from '../api/types'
 
+export const PRIORITIES: TicketPriority[] = ['Low', 'Medium', 'High', 'Critical']
+
 // The statuses in the order a ticket normally moves through them.
 export const STATUSES: TicketStatus[] = ['Open', 'In Progress', 'Resolved']
 

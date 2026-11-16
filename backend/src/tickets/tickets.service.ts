@@ -14,6 +14,16 @@ export class TicketsService {
     @InjectRepository(Conversation) private readonly conversations: Repository<Conversation>,
   ) {}
 
+  /** Priority is for admins (agents) only: employees get tickets without the `priority` field. */
+  forViewer<T extends Ticket | Ticket[]>(data: T, viewer: AuthUser): T {
+    if (viewer.role === UserRole.AGENT) return data;
+    const strip = (t: Ticket) => {
+      const { priority: _priority, ...rest } = t;
+      return rest as Ticket;
+    };
+    return (Array.isArray(data) ? data.map(strip) : strip(data as Ticket)) as T;
+  }
+
   // The ticket belongs to the employee who raised it.
   async create(dto: CreateTicketDto, userId: string) {
     // A ticket may only be linked to one of the caller's own conversations.
@@ -81,7 +91,7 @@ export class TicketsService {
     });
   }
 
-  // Used by the chat when the employee asks to raise/lower the urgency of their ticket.
+  // Admins (agents) only: called from PATCH /tickets/:id/priority.
   async updatePriority(id: number, priority: TicketPriority) {
     const ticket = await this.findOne(id);
     ticket.priority = priority;
